@@ -1,0 +1,237 @@
+----DDPatra---Catch the Falling Star Game====
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Falling Star</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #1a202c;
+            color: #e2e8f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        canvas {
+            background-color: #2d3748;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .game-container {
+            padding: 2rem;
+            background-color: #262e3d;
+            border-radius: 16px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.7);
+        }
+        .button {
+            background-color: #4c51bf;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border-bottom: 4px solid #3c419f;
+        }
+        .button:hover {
+            background-color: #4347a8;
+            transform: translateY(-2px);
+        }
+        .button:active {
+            transform: translateY(1px);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1 class="text-4xl mb-4 text-yellow-300">Catch the Star</h1>
+        <div class="text-2xl mb-4">Score: <span id="score">0</span></div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div class="mt-6">
+            <button id="startButton" class="button">Start Game</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Game Setup ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const startButton = document.getElementById('startButton');
+
+        let score = 0;
+        let gameOver = true;
+        let animationFrameId;
+
+        // --- Player (Paddle) ---
+        const player = {
+            width: 120,
+            height: 20,
+            x: canvas.width / 2 - 60,
+            y: canvas.height - 30,
+            speed: 15,
+            color: '#81e6d9'
+        };
+
+        // --- Star ---
+        let star = {
+            size: 25,
+            x: Math.random() * (canvas.width - 25),
+            y: 0,
+            speed: 3,
+            color: '#f6e05e'
+        };
+
+        // --- Event Listeners ---
+        document.addEventListener('mousemove', movePlayer);
+        startButton.addEventListener('click', startGame);
+
+        // --- Functions ---
+
+        /**
+         * Moves the player paddle based on mouse position
+         */
+        function movePlayer(e) {
+            const rect = canvas.getBoundingClientRect();
+            let root = document.documentElement;
+            let mouseX = e.clientX - rect.left - root.scrollLeft;
+            player.x = mouseX - player.width / 2;
+
+            // Keep player within canvas bounds
+            if (player.x < 0) {
+                player.x = 0;
+            }
+            if (player.x + player.width > canvas.width) {
+                player.x = canvas.width - player.width;
+            }
+        }
+        
+        /**
+         * Draws the player paddle
+         */
+        function drawPlayer() {
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+        }
+
+        /**
+         * Draws the falling star
+         */
+        function drawStar() {
+            ctx.fillStyle = star.color;
+            ctx.beginPath();
+            ctx.moveTo(star.x, star.y);
+            ctx.lineTo(star.x + star.size / 2, star.y + star.size);
+            ctx.lineTo(star.x - star.size / 2, star.y + star.size);
+            ctx.closePath();
+            ctx.fill();
+
+            // A simpler rectangular star if you prefer
+            // ctx.fillRect(star.x, star.y, star.size, star.size);
+        }
+
+        /**
+         * Updates the star's position and handles collisions
+         */
+        function updateStar() {
+            star.y += star.speed;
+
+            // Check for collision with player
+            if (
+                star.y + star.size > player.y &&
+                star.x > player.x &&
+                star.x < player.x + player.width
+            ) {
+                score++;
+                scoreElement.textContent = score;
+                star.speed += 0.2; // Increase difficulty
+                resetStar();
+            }
+
+            // Check if star is missed
+            if (star.y + star.size > canvas.height) {
+                endGame();
+            }
+        }
+
+        /**
+         * Resets the star to the top of the screen
+         */
+        function resetStar() {
+            star.y = 0;
+            star.x = Math.random() * (canvas.width - star.size);
+        }
+
+        /**
+         * The main game loop
+         */
+        function gameLoop() {
+            if (gameOver) return;
+
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw elements
+            drawPlayer();
+            drawStar();
+
+            // Update elements
+            updateStar();
+
+            // Request next frame
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        /**
+         * Starts a new game
+         */
+        function startGame() {
+            if (gameOver) {
+                gameOver = false;
+                score = 0;
+                star.speed = 3;
+                scoreElement.textContent = score;
+                resetStar();
+                startButton.textContent = 'Restart Game';
+                gameLoop();
+            }
+        }
+
+        /**
+         * Ends the current game
+         */
+        function endGame() {
+            gameOver = true;
+            cancelAnimationFrame(animationFrameId);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#f56565';
+            ctx.font = '50px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2);
+            ctx.font = '24px "Press Start 2P"';
+            ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 50);
+            startButton.textContent = 'Play Again?';
+        }
+
+        // Initial "Ready?" screen
+        function showReadyScreen() {
+             ctx.fillStyle = '#4c51bf';
+             ctx.font = '40px "Press Start 2P"';
+             ctx.textAlign = 'center';
+             ctx.fillText('Ready?', canvas.width / 2, canvas.height / 2);
+        }
+
+        showReadyScreen();
+    </script>
+</body>
+</html>
